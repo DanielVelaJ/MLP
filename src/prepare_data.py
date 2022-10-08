@@ -1,6 +1,12 @@
+"""
+This script takes the dataset, matches the ids to the reports and creates a split using a seed. 
+
+"""
 import pandas as pd
 import os
 from tqdm import tqdm
+seed=4 #Seed for choosing elements at random 
+
 # Prepare progress indication widget
 print('preparing data...')
 tqdm.pandas()
@@ -46,8 +52,42 @@ reports=pd.concat([df_2014,df_2015],axis=0)[['IDYEAR','Report']]
 #(4) Add reports to the dataset
 data['REPORT']=data.IDYEAR.progress_apply(lambda x:search_report(x,reports))
 
-#(5) Save the processed dataset with reports. 
+#(5) Avoid empty reports
+data=data[~data['REPORT'].isna()] 
+
+#(6) Shuffle data. 
+data=data.sample(frac=1,random_state=seed)
+
+#(7) Select only relevant columns. 
+cols=['REPORT','BRCAEvent','Year','AGE','DaysToEvent']
+data=data[cols]
+
+#() Save the processed dataset with reports. 
 os.makedirs('../data/clean',exist_ok=True)
 save_path='../data/clean/BreastCancer.csv'
-data[~data['REPORT'].isna()].to_csv(save_path,index=False)
-print(f"data prepared succesfully and saved at:  '{save_path}'")
+data.to_csv(save_path,index=False)
+
+# (7) Peform split.
+train_fraction=0.7
+validation_fraction=0.3
+test_fraction=0.0
+
+n=len(data) # total number of samples
+train_n=int(n*train_fraction)
+validation_n=int(n*validation_fraction)
+test_n=int(n*test_fraction)
+train_data=data[0:train_n]
+validation_data=data[train_n:train_n+validation_n]
+test_data=data[train_n+validation_n:
+                        train_n+validation_n+test_n]
+
+# (8) Save splits but only take reports and labels
+train_save_path='../data/clean/BreastCancer_train.csv'
+validation_save_path='../data/clean/BreastCancer_validation.csv'
+test_save_path='../data/clean/BreastCancer_test.csv'
+
+train_data.to_csv(train_save_path,index=False)
+validation_data.to_csv(validation_save_path,index=False)
+test_data.to_csv(test_save_path,index=False)
+
+print(f"data prepared succesfully and saved at:  '../data/clean/'")
